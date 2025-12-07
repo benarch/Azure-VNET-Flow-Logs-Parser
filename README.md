@@ -1,5 +1,9 @@
 # Azure VNET Flow Logs Parser
 
+> **⚠️ Important Note:** Microsoft has announced the retirement of **NSG Flow Logs** by **September 30, 2027**. New NSG Flow Logs cannot be created after **June 30, 2025**. It is strongly recommended to use **Virtual Network (VNET) Flow Logs** for all new deployments and migrate existing NSG Flow Logs. VNET Flow Logs provide enhanced capabilities and are the future standard for traffic analysis in Azure.
+>
+> For more details, please refer to the [official Azure documentation](https://learn.microsoft.com/en-us/azure/network-watcher/nsg-flow-logs-overview).
+
 This tool automates the retrieval and analysis of Azure VNET Flow Logs and NSG Flow Logs stored in Azure Blob Storage. It parses the complex JSON log format, handles different log versions, and provides a comprehensive traffic analysis report.
 
 ## Features
@@ -12,6 +16,7 @@ This tool automates the retrieval and analysis of Azure VNET Flow Logs and NSG F
   - **Traffic Decisions**: Statistics on Allowed vs. Denied traffic.
   - **Bandwidth Analysis**: Calculates total bandwidth usage (if Version 2 logs are present).
 - **Export**: Saves the fully parsed dataset to `vnet_flow_logs_report.csv` for further analysis.
+- **Sample Data**: A sample output file [`sample_vnet_flow_logs_report.csv`](sample_vnet_flow_logs_report.csv) is included in this repository to demonstrate the parsed data format.
 
 ## Prerequisites
 
