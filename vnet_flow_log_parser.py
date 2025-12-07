@@ -252,6 +252,157 @@ def analyze_traffic(df):
     print(df.sort_values(by='timestamp', ascending=False).head(20)[display_cols].to_markdown(index=False))
     print("\n")
 
+def generate_markdown_report(df, output_filename="traffic_analysis_report.md"):
+    """
+    Generates a detailed markdown report with specific traffic analysis insights.
+    """
+    if df.empty:
+        logging.warning("No data to generate markdown report.")
+        return
+
+    with open(output_filename, 'w') as f:
+        f.write("# Network Traffic Analysis Report\n\n")
+        f.write(f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        f.write(f"**Total Records Analyzed:** {len(df)}\n\n")
+
+        # --- 1. Destination Analysis ---
+        f.write("## 1. Destination Analysis\n\n")
+        f.write("Top destinations by flow count and total volume.\n\n")
+        
+        dest_grp = df.groupby('dest_ip').agg({
+            'timestamp': 'count',
+            'total_bytes': 'sum' if 'total_bytes' in df.columns else lambda x: 0
+        }).rename(columns={'timestamp': 'Flow Count', 'total_bytes': 'Total Bytes'})
+        
+        dest_grp['Total MB'] = dest_grp['Total Bytes'] / (1024 * 1024)
+        dest_grp = dest_grp.sort_values(by='Flow Count', ascending=False).head(20)
+        
+        f.write(dest_grp[['Flow Count', 'Total MB']].to_markdown())
+        f.write("\n\n")
+
+        # --- 2. Traffic Analysis by Rule Type ---
+        f.write("## 2. Traffic Analysis by Rule Type\n\n")
+        f.write("Breakdown of traffic patterns grouped by Rule Name.\n\n")
+
+        # Service Mapping
+        port_service_map = {
+            '80': 'HTTP', '443': 'HTTPS', '22': 'SSH', '3389': 'RDP',
+            '53': 'DNS', '21': 'FTP', '25': 'SMTP', '110': 'POP3',
+            '143': 'IMAP', '3306': 'MySQL', '1433': 'MSSQL', '5432': 'PostgreSQL',
+            '8080': 'HTTP-Alt', '8443': 'HTTPS-Alt'
+        }
+        
+        # Ensure dest_port is string for mapping
+        df['dest_port_str'] = df['dest_port'].astype(str)
+        df['service_type'] = df['dest_port_str'].map(port_service_map).fillna('Other')
+
+        # Grouping
+        rule_cols = ['rule_name', 'dest_ip', 'dest_port', 'protocol', 'service_type']
+        rule_grp = df.groupby(rule_cols).agg({
+            'timestamp': 'count',
+            'total_bytes': 'sum' if 'total_bytes' in df.columns else lambda x: 0
+        }).rename(columns={'timestamp': 'Sessions', 'total_bytes': 'Data Transferred (Bytes)'})
+        
+        rule_grp['Data Transferred (MB)'] = rule_grp['Data Transferred (Bytes)'] / (1024 * 1024)
+        
+        # Sort by Sessions within groups is hard in one go, so just sort by Sessions desc
+        rule_grp = rule_grp.sort_values(by='Sessions', ascending=False).head(50).reset_index()
+        
+        f.write(rule_grp.to_markdown(index=False))
+        f.write("\n\n")
+
+        # --- 3. HTTPS Traffic Patterns ---
+        f.write("## 3. HTTPS Traffic Patterns (Port 443)\n\n")
+        https_df = df[df['dest_port_str'] == '443']
+        
+        if not https_df.empty:
+            f.write(f"**Total HTTPS Flows:** {len(https_df)}\n\n")
+            
+            f.write("### Top HTTPS Sources\n")
+            https_src = https_df['src_ip'].value_counts().head(10).to_frame(name='Flow Count')
+            f.write(https_src.to_markdown())
+            f.write("\n\n")
+            
+            f.write("### Top HTTPS Destinations\n")
+            https_dest = https_df['dest_ip'].value_counts().head(10).to_frame(name='Flow Count')
+            f.write(https_dest.to_markdown())
+            f.write("\n\n")
+        else:
+            f.write("No HTTPS traffic detected.\n\n")
+
+        # --- 4. Traffic Volume Analysis ---
+        f.write("## 4. Traffic Volume Analysis\n\n")
+        f.write("Traffic volume grouped by Traffic Type (Allowed/Denied) and Direction.\n\n")
+        
+        # Group by Decision and Flow Direction
+        # traffic_decision: A (Allowed), D (Denied)
+        # traffic_flow: I (Inbound), O (Outbound)
+        
+        vol_grp = df.groupby(['traffic_decision', 'traffic_flow']).agg({
+            'timestamp': 'count',
+            'total_bytes': 'sum' if 'total_bytes' in df.columns else lambda x: 0
+        }).rename(columns={'timestamp': 'Sessions', 'total_bytes': 'Total Bytes'})
+        
+        vol_grp['Total KB'] = vol_grp['Total Bytes'] / 1024
+        
+        vol_grp = vol_grp.reset_index()
+        f.write(vol_grp[['traffic_decision', 'traffic_flow', 'Sessions', 'Total KB']].to_markdown(index=False))
+        f.write("\n\n")
+
+        # --- 5. Actionable Insights ---
+        f.write("## 5. Actionable Insights\n\n")
+        f.write("Derived actions and observations based on traffic patterns.\n\n")
+
+        # A. Target Subnets
+        f.write("### Target Subnets\n\n")
+        f.write("Identified active subnets based on destination IP traffic (assuming /24).\n\n")
+        
+        def get_subnet(ip):
+            if pd.isna(ip) or str(ip).count('.') != 3:
+                return 'Unknown'
+            return '.'.join(str(ip).split('.')[:3]) + '.0/24'
+
+        def get_rg_name(rid):
+            if pd.isna(rid): return 'Unknown-RG'
+            parts = str(rid).split('/')
+            if 'resourceGroups' in parts:
+                try:
+                    idx = parts.index('resourceGroups')
+                    return parts[idx+1]
+                except:
+                    return 'Unknown-RG'
+            return 'Unknown-RG'
+
+        df['dest_subnet'] = df['dest_ip'].apply(get_subnet)
+        df['resource_group'] = df['resource_id'].apply(get_rg_name)
+
+        subnet_grp = df.groupby(['dest_subnet', 'resource_group']).size().reset_index(name='Flow Count')
+        subnet_grp = subnet_grp.sort_values(by='Flow Count', ascending=False).head(5)
+
+        for _, row in subnet_grp.iterrows():
+            f.write(f"- **Target Subnet:** {row['dest_subnet']} ({row['resource_group']}) - {row['Flow Count']} flows\n")
+        
+        f.write("\n")
+
+        # B. Security Actions (Denied Traffic)
+        f.write("### Security Actions\n\n")
+        denied_df = df[df['traffic_decision'] == 'D']
+        
+        if not denied_df.empty:
+            f.write(f"- **Review Denied Traffic:** Detected {len(denied_df)} denied flows. Investigate top sources.\n")
+            top_denied_src = denied_df['src_ip'].value_counts().head(3).index.tolist()
+            f.write(f"- **Top Denied Sources:** {', '.join(top_denied_src)}\n")
+            
+            f.write("\n**Top Denied Flows Detail:**\n")
+            denied_grp = denied_df.groupby(['src_ip', 'dest_ip', 'dest_port', 'protocol']).size().reset_index(name='Count')
+            denied_grp = denied_grp.sort_values(by='Count', ascending=False).head(10)
+            f.write(denied_grp.to_markdown(index=False))
+        else:
+            f.write("- **No Denied Traffic:** No blocked flows detected in this period.\n")
+        f.write("\n\n")
+
+    logging.info(f"Markdown report generated: {output_filename}")
+
 def main():
     # Example SAS URL provided by user
     sas_url = "https://customeraflowlogs.blob.core.windows.net/insights-logs-flowlogflowevent?sp=rl&st=2025-12-07T20:07:36Z&se=2025-12-08T04:22:36Z&skoid=874455de-f57c-425e-9896-fee7985f4a07&sktid=21ef3553-ac23-4d67-a0b7-fa3d7d0d75e1&skt=2025-12-07T20:07:36Z&ske=2025-12-08T04:22:36Z&sks=b&skv=2024-11-04&spr=https&sv=2024-11-04&sr=c&sig=3tfEe4ZN%2BXcbqPPavH6NMjyKlFE2a%2F3U4i8bcMRDhQg%3D"
@@ -273,6 +424,9 @@ def main():
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     
     analyze_traffic(df)
+    
+    # Generate Markdown Report
+    generate_markdown_report(df)
     
     # Optional: Save to CSV
     output_file = "vnet_flow_logs_report.csv"

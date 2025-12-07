@@ -15,8 +15,16 @@ This tool automates the retrieval and analysis of Azure VNET Flow Logs and NSG F
   - **Protocol Usage**: Breakdown of traffic by protocol (TCP/UDP).
   - **Traffic Decisions**: Statistics on Allowed vs. Denied traffic.
   - **Bandwidth Analysis**: Calculates total bandwidth usage (if Version 2 logs are present).
-- **Export**: Saves the fully parsed dataset to `vnet_flow_logs_report.csv` for further analysis.
-- **Sample Data**: A sample output file [`sample_vnet_flow_logs_report.csv`](sample_vnet_flow_logs_report.csv) is included in this repository to demonstrate the parsed data format.
+- **Export**: 
+  - Saves the fully parsed dataset to `vnet_flow_logs_report.csv` for further analysis.
+  - Generates a detailed **Security & Traffic Analysis Report** in Markdown format (`traffic_analysis_report.md`), including:
+    - Destination Analysis (Top destinations by session count)
+    - Traffic Analysis by Rule Type (Sessions, Data Transferred)
+    - HTTPS Traffic Patterns
+    - Traffic Volume Analysis (Allowed vs Denied)
+- **Sample Data**: 
+  - [`sample_vnet_flow_logs_report.csv`](sample_vnet_flow_logs_report.csv): Demonstrates the parsed CSV format.
+  - [`traffic_analysis_report.md`](traffic_analysis_report.md): A sample of the generated Markdown analysis report.
 
 ## Prerequisites
 
