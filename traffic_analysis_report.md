@@ -1,6 +1,6 @@
 # Network Traffic Analysis Report
 
-**Generated on:** 2025-12-07 23:34:34
+**Generated on:** 2025-12-07 23:38:55
 
 **Total Records Analyzed:** 305
 
@@ -113,14 +113,23 @@ Breakdown of traffic patterns grouped by Rule Name.
 
 ## 4. Traffic Volume Analysis
 
+**Total Data Transferred:** 0.3079 MB
+
+### Volume by Direction
+| Direction   |   Total MB |
+|:------------|-----------:|
+| Inbound     |  0.0806808 |
+| Outbound    |  0.227235  |
+
+### Volume by Decision & Direction
 Traffic volume grouped by Traffic Type (Allowed/Denied) and Direction.
 
-| traffic_decision   | traffic_flow   |   Sessions |   Total KB |
+| traffic_decision   | traffic_flow   |   Sessions |   Total MB |
 |:-------------------|:---------------|-----------:|-----------:|
-| B                  | O              |        114 |     0      |
-| C                  | I              |          1 |    82.6172 |
-| D                  | I              |         75 |     0      |
-| E                  | O              |        115 |   232.688  |
+| B                  | O              |        114 |  0         |
+| C                  | I              |          1 |  0.0806808 |
+| D                  | I              |         75 |  0         |
+| E                  | O              |        115 |  0.227235  |
 
 ## 5. Actionable Insights
 

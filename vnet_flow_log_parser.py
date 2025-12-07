@@ -332,6 +332,22 @@ def generate_markdown_report(df, output_filename="traffic_analysis_report.md"):
 
         # --- 4. Traffic Volume Analysis ---
         f.write("## 4. Traffic Volume Analysis\n\n")
+        
+        if 'total_bytes' in df.columns:
+            total_bytes = df['total_bytes'].sum()
+            total_mb = total_bytes / (1024 * 1024)
+            f.write(f"**Total Data Transferred:** {total_mb:.4f} MB\n\n")
+            
+            # Direction Breakdown
+            if 'traffic_flow' in df.columns:
+                direction_grp = df.groupby('traffic_flow')['total_bytes'].sum().reset_index()
+                direction_grp['Total MB'] = direction_grp['total_bytes'] / (1024 * 1024)
+                direction_grp['Direction'] = direction_grp['traffic_flow'].map({'I': 'Inbound', 'O': 'Outbound'}).fillna(direction_grp['traffic_flow'])
+                f.write("### Volume by Direction\n")
+                f.write(direction_grp[['Direction', 'Total MB']].to_markdown(index=False))
+                f.write("\n\n")
+
+        f.write("### Volume by Decision & Direction\n")
         f.write("Traffic volume grouped by Traffic Type (Allowed/Denied) and Direction.\n\n")
         
         # Group by Decision and Flow Direction
@@ -343,10 +359,10 @@ def generate_markdown_report(df, output_filename="traffic_analysis_report.md"):
             'total_bytes': 'sum' if 'total_bytes' in df.columns else lambda x: 0
         }).rename(columns={'timestamp': 'Sessions', 'total_bytes': 'Total Bytes'})
         
-        vol_grp['Total KB'] = vol_grp['Total Bytes'] / 1024
+        vol_grp['Total MB'] = vol_grp['Total Bytes'] / (1024 * 1024)
         
         vol_grp = vol_grp.reset_index()
-        f.write(vol_grp[['traffic_decision', 'traffic_flow', 'Sessions', 'Total KB']].to_markdown(index=False))
+        f.write(vol_grp[['traffic_decision', 'traffic_flow', 'Sessions', 'Total MB']].to_markdown(index=False))
         f.write("\n\n")
 
         # --- 5. Actionable Insights ---
