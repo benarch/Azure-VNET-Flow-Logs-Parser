@@ -22,6 +22,9 @@ This tool automates the retrieval and analysis of Azure VNET Flow Logs and NSG F
     - Traffic Analysis by Rule Type (Sessions, Data Transferred)
     - HTTPS Traffic Patterns
     - Traffic Volume Analysis (Allowed vs Denied)
+    - **Actionable Insights**:
+      - **Target Subnets**: Identifies active subnets based on destination traffic.
+      - **Security Actions**: Highlights denied traffic and top blocked sources for investigation.
 - **Sample Data**: 
   - [`sample_vnet_flow_logs_report.csv`](sample_vnet_flow_logs_report.csv): Demonstrates the parsed CSV format.
   - [`traffic_analysis_report.md`](traffic_analysis_report.md): A sample of the generated Markdown analysis report.
@@ -64,6 +67,22 @@ This tool automates the retrieval and analysis of Azure VNET Flow Logs and NSG F
 
 ## Output
 
-The script outputs a summary table in the console and generates a CSV file:
-- **Console Output**: Quick insights into traffic patterns and top consumers.
-- **vnet_flow_logs_report.csv**: Detailed record of every flow tuple parsed, including timestamps, IPs, ports, rules, and throughput metrics.
+The script generates the following outputs:
+
+1. **Console Summary**: 
+   - Displays quick insights into traffic patterns, top talkers, and protocol usage directly in the terminal.
+
+2. **Detailed CSV Report** (`vnet_flow_logs_report.csv`):
+   - A comprehensive dataset containing every parsed flow tuple.
+   - Includes timestamps, source/destination IPs & ports, protocols, rule names, and throughput metrics (packets/bytes).
+
+3. **Security & Traffic Analysis Report** (`traffic_analysis_report.md`):
+   - A formatted Markdown report designed for easy reading and sharing.
+   - **Key Sections**:
+     - **Destination Analysis**: Top destinations by flow count and data volume.
+     - **Rule Analysis**: Traffic patterns grouped by NSG rules and service types (HTTP, SSH, etc.).
+     - **HTTPS Insights**: Specific analysis of encrypted traffic on port 443.
+     - **Volume Analysis**: Detailed breakdown of data transfer (MB) by direction (Inbound/Outbound) and decision (Allowed/Denied).
+     - **Actionable Insights**: 
+       - **Target Subnets**: Identifies active subnets receiving traffic.
+       - **Security Actions**: Highlights denied traffic sources that require investigation.
